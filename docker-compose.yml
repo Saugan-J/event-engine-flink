@@ -1,0 +1,96 @@
+# event-engine-flink — standalone
+# Provides Flink JobManager + TaskManagers for stream processing.
+#
+# Prerequisites:
+#   docker network create event-engine-net
+#   Kafka must be running (ee-kafka on event-engine-net)
+#   ClickHouse must be running (ee-clickhouse on event-engine-net)
+#
+# Start:
+#   docker compose up -d
+#
+# Verify:
+#   curl http://localhost:8081
+
+services:
+  flink-jobmanager:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile
+    image: ee-flink:latest
+    container_name: ee-flink-jobmanager
+    hostname: flink-jobmanager
+    ports:
+      - "${FLINK_UI_PORT:-8081}:8081"
+      - "9249:9249"
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        jobmanager.memory.process.size: 2048m
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 4
+        state.backend: rocksdb
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.savepoints.dir: file:///tmp/flink-savepoints
+        execution.checkpointing.interval: 60000
+        execution.checkpointing.mode: EXACTLY_ONCE
+    volumes:
+      - flink_jm_data:/tmp
+      - ./target:/opt/flink/jobs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - event-engine-net
+
+  flink-taskmanager-1:
+    image: ee-flink:latest
+    container_name: ee-flink-tm1
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.memory.process.size: 4096m
+        taskmanager.numberOfTaskSlots: 8
+    volumes:
+      - flink_tm1_data:/tmp
+    restart: unless-stopped
+    networks:
+      - event-engine-net
+
+  flink-taskmanager-2:
+    image: ee-flink:latest
+    container_name: ee-flink-tm2
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.memory.process.size: 4096m
+        taskmanager.numberOfTaskSlots: 8
+    volumes:
+      - flink_tm2_data:/tmp
+    restart: unless-stopped
+    networks:
+      - event-engine-net
+
+volumes:
+  flink_jm_data:
+  flink_tm1_data:
+  flink_tm2_data:
+
+networks:
+  event-engine-net:
+    external: true

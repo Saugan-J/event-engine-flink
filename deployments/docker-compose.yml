@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Flink Job Manager
+  flink-jobmanager:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    image: event-engine-flink-slim:latest
+    container_name: event-engine-flink-jobmanager
+    hostname: flink-jobmanager
+    ports:
+      - "8081:8081"   # Web UI
+      - "9249:9249"   # Metrics
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        jobmanager.memory.process.size: 2048m
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 4
+        state.backend: rocksdb
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.savepoints.dir: file:///tmp/flink-savepoints
+        execution.checkpointing.interval: 60000
+        execution.checkpointing.mode: EXACTLY_ONCE
+        execution.checkpointing.externalized-checkpoint-retention: RETAIN_ON_CANCELLATION
+    volumes:
+      - flink_jobmanager_data:/tmp
+      - ./target:/opt/flink/jobs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - kafka
+      - clickhouse
+    restart: unless-stopped
+
+  # Flink Task Manager 1
+  flink-taskmanager-1:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    image: event-engine-flink-slim:latest
+    container_name: event-engine-flink-taskmanager-1
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.memory.process.size: 4096m
+        taskmanager.numberOfTaskSlots: 8
+    volumes:
+      - flink_taskmanager_1_data:/tmp
+    restart: unless-stopped
+
+  # Flink Task Manager 2
+  flink-taskmanager-2:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    image: event-engine-flink-slim:latest
+    container_name: event-engine-flink-taskmanager-2
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.memory.process.size: 4096m
+        taskmanager.numberOfTaskSlots: 8
+    volumes:
+      - flink_taskmanager_2_data:/tmp
+    restart: unless-stopped
+
+volumes:
+  flink_jobmanager_data:
+    name: event-engine-flink-jobmanager-data
+  flink_taskmanager_1_data:
+    name: event-engine-flink-taskmanager-1-data
+  flink_taskmanager_2_data:
+    name: event-engine-flink-taskmanager-2-data
+
+networks:
+  default:
+    name: event-engine-network
+    external: true

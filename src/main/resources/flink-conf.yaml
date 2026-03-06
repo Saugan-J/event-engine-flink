@@ -1,0 +1,43 @@
+# Checkpointing
+execution.checkpointing.interval: 60000
+execution.checkpointing.mode: EXACTLY_ONCE
+execution.checkpointing.timeout: 600000
+execution.checkpointing.min-pause: 10000
+execution.checkpointing.max-concurrent-checkpoints: 1
+execution.checkpointing.externalized-checkpoint-retention: RETAIN_ON_CANCELLATION
+execution.checkpointing.tolerable-failed-checkpoints: 3
+execution.checkpointing.unaligned.enabled: true
+
+# State backend
+state.backend: rocksdb
+state.backend.incremental: true
+state.checkpoints.dir: file:///tmp/flink-checkpoints
+state.savepoints.dir: file:///tmp/flink-savepoints
+
+# RocksDB tuning
+state.backend.rocksdb.predefined-options: SPINNING_DISK_OPTIMIZED_HIGH_MEM
+state.backend.rocksdb.block.cache-size: 512m
+state.backend.rocksdb.writebuffer.size: 64m
+state.backend.rocksdb.writebuffer.count: 4
+
+# Mini-batch optimization
+table.exec.mini-batch.enabled: true
+table.exec.mini-batch.allow-latency: 1s
+table.exec.mini-batch.size: 5000
+table.optimizer.agg-phase-strategy: TWO_PHASE
+
+# Memory
+taskmanager.memory.process.size: 4096m
+taskmanager.memory.managed.size: 2048m
+taskmanager.memory.network.min: 256m
+taskmanager.memory.network.max: 512m
+jobmanager.memory.process.size: 2048m
+
+# Network
+taskmanager.network.memory.fraction: 0.2
+taskmanager.network.memory.min: 256mb
+taskmanager.network.memory.max: 1gb
+
+# Metrics
+metrics.reporter.prometheus.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+metrics.reporter.prometheus.port: 9249
