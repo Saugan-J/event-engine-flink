@@ -9,7 +9,7 @@ SELECT
     COUNT(DISTINCT user_id) AS unique_users,
     CURRENT_TIMESTAMP AS max_timestamp
 FROM TABLE(
-    TUMBLE(TABLE usage_events, DESCRIPTOR(event_time), INTERVAL '10' SECOND)
+    TUMBLE(TABLE usage_events, DESCRIPTOR(proc_time), INTERVAL '10' SECOND)
 )
 GROUP BY
     org_id,

@@ -6,14 +6,15 @@ CREATE TABLE tenant_aggs_1min_sink (
     total_usage DOUBLE,
     event_count BIGINT,
     unique_users BIGINT,
-    max_timestamp TIMESTAMP(3)
+    max_timestamp TIMESTAMP(3),
+    PRIMARY KEY (tenant_id, window_start, window_end) NOT ENFORCED
 ) WITH (
-    'connector' = 'kafka',
+    'connector' = 'upsert-kafka',
     'topic' = 'tenant-aggs-1min',
     'properties.bootstrap.servers' = 'kafka:29092',
-    'format' = 'json',
-    'json.fail-on-missing-field' = 'false',
-    'json.ignore-parse-errors' = 'true',
     'key.format' = 'json',
-    'key.fields' = 'tenant_id;window_start'
+    'value.format' = 'json',
+    'value.fields-include' = 'EXCEPT_KEY',
+    'value.json.fail-on-missing-field' = 'false',
+    'value.json.ignore-parse-errors' = 'true'
 );

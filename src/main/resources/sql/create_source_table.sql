@@ -8,11 +8,11 @@ CREATE TABLE usage_events (
     unit STRING,
     service STRING,
     timestamp_ms BIGINT,
-    metadata STRING,
     
     -- Event time attribute from timestamp_ms field
     event_time AS TO_TIMESTAMP_LTZ(timestamp_ms, 3),
-    WATERMARK FOR event_time AS event_time - INTERVAL '2' SECOND
+    WATERMARK FOR event_time AS event_time - INTERVAL '2' SECOND,
+    proc_time AS PROCTIME()
     
 ) WITH (
     'connector' = 'kafka',
